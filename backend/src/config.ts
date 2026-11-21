@@ -18,10 +18,14 @@ export const config = {
     graphVersion: 'v21.0',
   },
 
-  openai: {
-    apiKey: env.OPENAI_API_KEY ?? '',
-    model: env.OPENAI_MODEL ?? 'gpt-4o',
-    visionModel: env.OPENAI_VISION_MODEL ?? 'gpt-4o',
+  ai: {
+    apiKey: env.AI_API_KEY ?? env.OPENAI_API_KEY ?? '',
+    // 'gemini' | 'groq' | 'openai' | 'openrouter' — all OpenAI-compatible endpoints
+    provider: (env.AI_PROVIDER ?? (env.AI_API_KEY ? 'gemini' : 'openai')) as 'gemini' | 'groq' | 'openai' | 'openrouter',
+    baseUrl: env.AI_BASE_URL ?? '',
+    chatModel: env.AI_CHAT_MODEL ?? '',
+    visionModel: env.AI_VISION_MODEL ?? '',
+    audioModel: env.AI_AUDIO_MODEL ?? '',
   },
 
   paystack: {
@@ -45,10 +49,48 @@ export const config = {
   },
 };
 
+/** Model defaults per provider. Override with AI_CHAT_MODEL / AI_VISION_MODEL / AI_AUDIO_MODEL. */
+export function aiModels(): { chat: string; vision: string; audio: string } {
+  const c = config.ai;
+  switch (c.provider) {
+    case 'gemini':
+      return {
+        chat: c.chatModel || 'gemini-2.5-flash',
+        vision: c.visionModel || c.chatModel || 'gemini-2.5-flash',
+        audio: c.audioModel || 'gemini-2.5-flash',
+      };
+    case 'groq':
+      return {
+        chat: c.chatModel || 'llama-3.3-70b-versatile',
+        vision: c.visionModel || 'meta-llama/llama-4-scout-17b-16e-instruct',
+        audio: c.audioModel || 'whisper-large-v3',
+      };
+    default:
+      return {
+        chat: c.chatModel || 'gpt-4o',
+        vision: c.visionModel || c.chatModel || 'gpt-4o',
+        audio: c.audioModel || 'whisper-1',
+      };
+  }
+}
+
+export function providerBaseUrl(provider: string): string | undefined {
+  switch (provider) {
+    case 'gemini':
+      return 'https://generativelanguage.googleapis.com/v1beta/openai/';
+    case 'groq':
+      return 'https://api.groq.com/openai/v1';
+    case 'openrouter':
+      return 'https://openrouter.ai/api/v1';
+    default:
+      return undefined; // official OpenAI
+  }
+}
+
 const required: Array<[string, string]> = [
   ['WHATSAPP_TOKEN', config.whatsapp.token],
   ['WHATSAPP_PHONE_NUMBER_ID', config.whatsapp.phoneNumberId],
-  ['OPENAI_API_KEY', config.openai.apiKey],
+  ['AI_API_KEY (or OPENAI_API_KEY)', config.ai.apiKey],
   ['PAYSTACK_SECRET_KEY', config.paystack.secretKey],
   ['MONGODB_URI', config.mongoUri],
 ];

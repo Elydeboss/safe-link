@@ -1,4 +1,5 @@
 import { Router, type Request, type Response } from 'express';
+import { config } from '../config';
 import { InvoiceModel, EscrowModel, VendorModel } from '../models';
 
 const router = Router();

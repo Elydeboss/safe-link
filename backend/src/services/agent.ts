@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { z } from 'zod';
 import crypto from 'node:crypto';
-import { config } from '../config';
+import { config, aiModels, providerBaseUrl } from '../config';
 import { InvoiceModel, EscrowModel, VendorModel, type IInvoice } from '../models';
 import { summarize, type Timeframe } from './ledger';
 import { nanoid } from 'nanoid';
@@ -11,9 +11,18 @@ import { deriveEscrowPda, deriveVaultPda, solanaConfigured } from './solana';
  * TIER 1 — AI Perception. Non-deterministic on purpose, and therefore never
  * allowed to touch money: it can only emit typed tool calls, which the
  * deterministic engine validates and executes (see engine/state.ts).
+ *
+ * Provider-agnostic by design: the OpenAI SDK works against any compatible
+ * endpoint (Gemini / Groq / OpenRouter / OpenAI) — set AI_PROVIDER + AI_API_KEY.
+ * Gemini audio has no compat endpoint, so voice notes use its native API.
  */
 
-const client = new OpenAI({ apiKey: config.openai.apiKey });
+const MODELS = aiModels();
+
+const client = new OpenAI({
+  apiKey: config.ai.apiKey,
+  baseURL: config.ai.baseUrl || providerBaseUrl(config.ai.provider),
+});
 
 // ─── Tool parameter schemas (Zod) ────────────────────────────────────────────
 
@@ -274,15 +283,14 @@ export async function verifyDispatchVision(image: { buffer: Buffer; mime: string
   const dataUrl = `data:${image.mime};base64,${image.buffer.toString('base64')}`;
 
   const res = await client.chat.completions.create({
-    model: config.openai.visionModel,
-    response_format: { type: 'json_object' },
+    model: MODELS.vision,
     messages: [
       {
         role: 'user',
         content: [
           {
             type: 'text',
-            text: `You are auditing a vendor's pre-shipment proof for an escrow order. The invoice line items are: ${itemList}. Look at this photo (a package, product, or courier waybill). Does the photo plausibly show the item(s) ready for dispatch, or a valid dispatch waybill? Respond as JSON: {"verified": boolean, "confidence": number between 0 and 1, "summary": "one short sentence describing what you see"}. Be lenient on photo quality, strict on obvious mismatches (e.g. invoice says sneakers, photo shows a phone).`,
+            text: `You are auditing a vendor's pre-shipment proof for an escrow order. The invoice line items are: ${itemList}. Look at this photo (a package, product, or courier waybill). Does the photo plausibly show the item(s) ready for dispatch, or a valid dispatch waybill? Respond with ONLY raw JSON, no markdown fences: {"verified": boolean, "confidence": number between 0 and 1, "summary": "one short sentence describing what you see"}. Be lenient on photo quality, strict on obvious mismatches (e.g. invoice says sneakers, photo shows a phone).`,
           },
           { type: 'image_url', image_url: { url: dataUrl } },
         ],
@@ -291,7 +299,12 @@ export async function verifyDispatchVision(image: { buffer: Buffer; mime: string
   });
 
   try {
-    const raw = JSON.parse(res.choices[0].message?.content ?? '{}') as { verified?: boolean; confidence?: number; summary?: string };
+    // defensive parse: strip fences / prose, take the outermost JSON object
+    const raw = JSON.parse((res.choices[0].message?.content ?? '{}').match(/\{[\s\S]*\}/)?.[0] ?? '{}') as {
+      verified?: boolean;
+      confidence?: number;
+      summary?: string;
+    };
     return {
       aiVerified: Boolean(raw.verified),
       confidence: Number(raw.confidence ?? 0),
@@ -305,9 +318,34 @@ export async function verifyDispatchVision(image: { buffer: Buffer; mime: string
 // ─── Main entrypoints ────────────────────────────────────────────────────────
 
 export async function transcribeVoice(buffer: Buffer, mime: string): Promise<string> {
+  if (config.ai.provider === 'gemini') {
+    return transcribeWithGeminiNative(buffer, mime); // no audio endpoint in Gemini's compat layer
+  }
   const file = new File([buffer], 'voice.ogg', { type: mime || 'audio/ogg' });
-  const res = await client.audio.transcriptions.create({ model: 'whisper-1', file });
+  const res = await client.audio.transcriptions.create({ model: MODELS.audio, file });
   return res.text;
+}
+
+/** Gemini native API for voice-note transcription (Pidgin-friendly). */
+async function transcribeWithGeminiNative(buffer: Buffer, mime: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODELS.audio}:generateContent?key=${config.ai.apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [
+        {
+          parts: [
+            { text: 'Transcribe this WhatsApp voice note verbatim. It may be Nigerian Pidgin or English. Reply with ONLY the transcript text, nothing else.' },
+            { inline_data: { mime_type: mime || 'audio/ogg', data: buffer.toString('base64') } },
+          ],
+        },
+      ],
+    }),
+  });
+  if (!res.ok) throw new Error(`gemini audio failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  const json = (await res.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  return json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join(' ').trim() ?? '';
 }
 
 export async function handleText(phone: string, profileName: string, text: string): Promise<string> {
@@ -318,7 +356,7 @@ export async function handleText(phone: string, profileName: string, text: strin
   ];
 
   for (let hop = 0; hop < 3; hop++) {
-    const res = await client.chat.completions.create({ model: config.openai.model, messages, tools });
+    const res = await client.chat.completions.create({ model: MODELS.chat, messages, tools });
     const msg = res.choices[0].message;
 
     if (msg.tool_calls && msg.tool_calls.length > 0) {
