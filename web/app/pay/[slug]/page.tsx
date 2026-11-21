@@ -56,22 +56,20 @@ export default function PayPage({ params }: { params: { slug: string } }) {
     metadata: { custom_fields: [{ display_name: 'Order', variable_name: 'order', value: slug }] },
   });
 
-  const onPaystackSuccess = useCallback(
-    async (ref: { reference?: string }) => {
-      setBusy('pay');
-      try {
-        // Server verifies with Paystack itself — client success is never trusted alone.
-        await postJson(`/api/escrows/${slug}/confirm-fiat`, { reference: ref.reference ?? slug });
-        setNotice('Payment confirmed. Funds are now held in escrow 🔒');
-        await load();
-      } catch (err) {
-        setError((err as Error).message);
-      } finally {
-        setBusy(null);
-      }
-    },
-    [slug, load],
-  );
+  // react-paystack v4: onSuccess receives no args — we know the reference (it's our slug)
+  const onPaystackSuccess = useCallback(async () => {
+    setBusy('pay');
+    try {
+      // Server verifies with Paystack itself — client success is never trusted alone.
+      await postJson(`/api/escrows/${slug}/confirm-fiat`, { reference: slug });
+      setNotice('Payment confirmed. Funds are now held in escrow 🔒');
+      await load();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, [slug, load]);
 
   // ── Solana deposit (USDC lock) ────────────────────────────────────────────
   const onDeposit = useCallback(async () => {

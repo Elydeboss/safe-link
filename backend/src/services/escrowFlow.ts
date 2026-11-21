@@ -321,6 +321,19 @@ export async function notifyVendor(invoice: IInvoice, body: string): Promise<voi
   if (vendor) await notify(vendor.whatsappNumber, body);
 }
 
+/** Latest order of this vendor that is funded and awaiting a dispatch proof. */
+export async function latestAwaitingDispatch(vendorPhone: string): Promise<string | null> {
+  const vendorInvoices = await InvoiceModel.find({ status: 'FUNDED_IN_ESCROW' }).sort({ createdAt: -1 }).limit(10).populate('vendorId');
+  for (const inv of vendorInvoices) {
+    const vendor = inv.vendorId as unknown as { whatsappNumber?: string };
+    if (vendor?.whatsappNumber === vendorPhone) {
+      const esc = await EscrowModel.findOne({ invoiceId: inv._id });
+      if (esc && !esc.dispatchProof?.aiVerified) return inv.slug;
+    }
+  }
+  return null;
+}
+
 function nanoidRef(): string {
   return Math.random().toString(36).slice(2, 8);
 }

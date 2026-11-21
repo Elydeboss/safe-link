@@ -2,8 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { config } from '../config';
 import { downloadMedia, sendText } from '../services/whatsapp';
 import { handleText, transcribeVoice } from '../services/agent';
-import { verifyDispatch } from '../services/escrowFlow';
-import { InvoiceModel, EscrowModel } from '../models';
+import { verifyDispatch, latestAwaitingDispatch } from '../services/escrowFlow';
 
 const router = Router();
 
@@ -79,18 +78,6 @@ async function processPayload(payload: unknown): Promise<void> {
       await sendText(phone, 'Oops, something broke on my side. Please try again.').catch(() => {});
     }
   }
-}
-
-async function latestAwaitingDispatch(vendorPhone: string): Promise<string | null> {
-  const vendorInvoices = await InvoiceModel.find({ status: 'FUNDED_IN_ESCROW' }).sort({ createdAt: -1 }).limit(10).populate('vendorId');
-  for (const inv of vendorInvoices) {
-    const vendor = inv.vendorId as unknown as { whatsappNumber?: string };
-    if (vendor?.whatsappNumber === vendorPhone) {
-      const esc = await EscrowModel.findOne({ invoiceId: inv._id });
-      if (esc && !esc.dispatchProof?.aiVerified) return inv.slug;
-    }
-  }
-  return null;
 }
 
 interface WhatsAppValue {

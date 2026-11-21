@@ -3,6 +3,7 @@ import { config, warnMissingConfig } from './config';
 import { connectDb } from './db';
 import { whatsappWebhookRouter } from './routes/whatsapp';
 import { paystackWebhookRouter } from './routes/paystack';
+import { chatRouter } from './routes/chat';
 import { invoicesRouter } from './routes/invoices';
 import { escrowsRouter } from './routes/escrows';
 import { devRouter } from './routes/dev';
@@ -36,6 +37,7 @@ async function main(): Promise<void> {
   app.use('/api/invoices', invoicesRouter);
   app.use('/api/escrows', escrowsRouter);
   app.use('/api/dev', devRouter);
+  app.use('/api/chat', chatRouter);
 
   app.listen(config.port, () => {
     console.log(`[kolo] backend listening on :${config.port}`);
