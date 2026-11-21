@@ -1,8 +1,33 @@
 # Kolo 🔒
 
-**Buyer-protected checkout for WhatsApp vendors** — an AI agent that invoices, takes payment (₦ / USDC), holds funds in escrow, AI-verifies dispatch photos, and releases on buyer confirmation. Calabar Build Hackathon 2026.
+**Buyer-protected checkout for WhatsApp vendors** — an AI agent that invoices, takes payment (₦ / USDC), holds funds in escrow, AI-verifies dispatch photos, and releases on buyer confirmation.
 
-Read [`SPEC.md`](./SPEC.md) first — it is the source of truth for scope, architecture, and the build plan.
+Built for the TCC Hackathon 2026 (Tech Conference Calabar) — *"Solve Local Problems with Global Solutions."*
+
+> Calabar vendors run real businesses through WhatsApp Status and DMs. Buyers hesitate because of "what I ordered vs what I got" scams, and P2P traders fear fake bank alerts. Kolo is an AI escrow agent living in the chat app they already use: the vendor's AI bookkeeper, and the buyer's proof that nobody — vendor **or** platform — can touch the money until delivery is confirmed.
+
+Read [`SPEC.md`](./SPEC.md) for the full architecture and build plan.
+
+## Features built during the sprint (Nov 22–24, 2026)
+
+> Per the participant guide, judges score sprint work. This list will be kept accurate as the sprint progresses.
+
+*(This repository was initialized with a scaffold baseline on Nov 21 — models, state machine, route skeletons, program source — committed separately as "Pre-sprint baseline". The features below are the sprint deliverables.)*
+
+- [ ] Live WhatsApp Cloud API agent: Pidgin text + voice-note invoicing (Whisper + GPT-4o tool calls)
+- [ ] Paystack (test) fiat escrow: charge → hold → webhook-verified FUNDED state → buyer-controlled release → vendor payout
+- [ ] Vision AI dispatch verification: package photo in chat → GPT-4o audit vs invoice line items → buyer-page badge
+- [ ] Solana devnet non-custodial USDC escrow: Anchor PDA vault, Phantom deposit, wallet-signed release, 1.5% fee, public explorer proof
+- [ ] P2P crypto-for-naira escrow flow (USDC locked on-chain, naira off-chain, seller releases)
+- [ ] Conversational multi-currency ledger ("how much I make this week?")
+- [ ] Dispute freeze + 24h auto-release
+- [ ] Deployed: web (Vercel) + API (Render) + DB (Atlas) + program (devnet) — URLs below
+
+## AI tools disclosure
+
+- **OpenCode agent (GLM, Z.ai)** — code generation, project scaffolding, debugging, and test writing throughout the sprint, directed by the team.
+- **GitHub Copilot-style completions** — not used beyond the above.
+- Runtime AI in the product itself: OpenAI GPT-4o (intent parsing + vision audit), Whisper (voice notes) — disclosed here and in the pitch.
 
 ## Layout
 

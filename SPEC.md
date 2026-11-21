@@ -1,9 +1,9 @@
 # SPEC — WhatsApp AI Vendor Escrow Hub
 
 **Working name:** Kolo (Nigerian piggy-bank / safe box)
-**Target event:** Calabar Build Hackathon 2026 ("Build AI-powered solutions to solve real local problems")
+**Target event:** TCC Hackathon 2026, Tech Conference Calabar — "Solve Local Problems with Global Solutions"
 **Team:** 1 builder (web dev, new to Solana)
-**Build window:** assumed 48h on-site + unlimited prep before the event
+**Format:** REMOTE 3-day build sprint — **Nov 22, 00:00 → Nov 24, 23:59 WAT**. Submit: public GitHub repo + 5-min public video (4:50–5:10) + form. Judges score ONLY sprint work (Nov 22–24); pre-sprint baseline is committed separately and listed in the README.
 
 ---
 
@@ -284,18 +284,44 @@ TTc-hack/
 
 ---
 
-## 13. 48-hour on-site plan (serialized, with gates)
+## 13. 3-day sprint plan (Nov 22–24, remote)
 
-| Hours | Work | Gate at end |
+**Scoring alignment (rubric → our play):**
+
+| Criterion | Pts | How we earn it |
 |---|---|---|
-| 0–8 | Wire real WhatsApp ingress → agent parses text → `create_invoice` → link in chat reply. DB only. | **Gate 1:** text a Pidgin order, get a valid link back. |
-| 8–16 | `/pay/[slug]` checkout; Paystack test charge; webhook marks FUNDED; both parties notified. | **Gate 2:** fake-buyer loop works end-to-end **with mock payout**. If not: cut scope, not quality. |
-| 16–26 | Dispatch photo → vision verify → DISPATCHED; release page + token; payout via transfer API; ledger entries; WhatsApp summaries. | **Gate 3:** full Flow A live, twice in a row. |
-| 26–34 | Flow D ledger summary; `DISPUTED` + `mock-fund` + `tick` stage toggles; Pidgin reply polish. | Ledger answers a spoken question correctly. |
-| 34–42 | Flow C wiring (program already deployed): lock link → Phantom deposit → buyer release on web → explorer link shown. | If blocked >4h: freeze Flow C, screenshot fallback. |
-| 42–48 | **Demo rehearsal ×3** with mocked network; record a backup video of the full demo; pitch polish. | Video exists. Sleep ≥5h. |
+| Working Product & Technical Execution | 25 | Full loop works live on video: chat → invoice → pay → AI-verified dispatch → release → ledger |
+| Architecture & Code Quality | 20 | Two-tier AI/deterministic separation, typed Zod tool contracts, state machine, no floats in money |
+| Scalability & Production Readiness | 15 | **Actually deployed**: web on Vercel, backend on Render, Mongo on Atlas, program on devnet — public URLs |
+| Innovation & Local Relevance | 15 | Calabar-specific story: WhatsApp status sellers, "what I ordered vs what I got", Pidgin voice notes |
+| Demo Quality & Communication | 10 | 5:00 video: 30s problem → 4min real product → 30s stack/next |
+| Social engagement (separate) | 15 | Post video publicly early on Nov 24; rally until Nov 28 noon; only the submitted post counts |
 
-**Demo choreography (3 min):** two phones mirrored — (1) Pidgin voice note → link → buyer pays on phone 2 → FUNDED toast in chat; (2) snap real shoebox on stage → AI-verified badge; (3) buyer taps Release → vendor's WhatsApp summary; (4) "how much I make this week?" ledger answer; (5) if Flow C works: vault + explorer link as the trustless finale.
+**Day 1 — Sat Nov 22: fiat loop + real WhatsApp (target: Flow A end-to-end)**
+- Register for the hackathon BEFORE NOON (form closes).
+- Meta app + WhatsApp test number; webhook through the deployed backend (not localhost).
+- Deploy: Mongo Atlas cluster → Render backend → Vercel web. Public URLs in env + README.
+- Paystack test charge + webhook → FUNDED; buyer release page works. Ledger summary over WhatsApp.
+- **Gate:** text the bot a Pidgin order → pay on phone → release → vendor summary. Record it (raw footage for the video).
+
+**Day 2 — Sun Nov 23: crypto rail + vision (target: Flow C + dispatch verification)**
+- Deploy anchor program to devnet (`anchor/README.md`), mint demo USDC, wire env.
+- USDC deposit via Phantom → vault on explorer → wallet-signed release. P2P flow too if time allows.
+- Vision AI dispatch proof: photo in chat → verify → buyer page badge.
+- Dispute freeze + auto-release tick button.
+- **Gate:** full dual-rail demo works against deployed URLs. Record raw footage.
+
+**Day 3 — Mon Nov 24: polish + submit**
+- Morning: README (sprint-work list + AI disclosure), .env examples, seed script, small bugs.
+- Midday: record the 5:00 video (script below), re-record until clean; screen-record phones + browser.
+- Afternoon: post publicly (tag TCC, #CTCHackathon2026 #TechConferenceCalabar), verify in incognito, submit the form BEFORE 23:59. Then start pushing the post for engagement.
+
+**5-minute video script (matches Demo Quality rubric):**
+- 0:00–0:30 — problem: Calabar vendors sell on WhatsApp Status; buyers fear "what I ordered vs what I got"; P2P traders fear fake alerts. Show a real WhatsApp status sale + a scam tweet screenshot.
+- 0:30–4:30 — the product, live: vendor Pidgin VOICE NOTE → invoice link → buyer pays (₦ test) → escrow held → vendor snaps package photo → AI verifies → buyer confirms → vendor paid + weekly ledger query. Then the trustless finale: USDC vault locked with the public explorer link.
+- 4:30–5:00 — stack in one breath (WhatsApp Cloud API, GPT-4o + Whisper, Paystack, Solana/Anchor, Next.js) + next: groups, naira escrow license, multi-vendor. CTA.
+
+**Video mechanics (rubric is strict):** 4:50–5:10; public post; tag Tech Conference Calabar; hashtags; test link in incognito; never delete/re-upload before Nov 28.
 
 ---
 
@@ -338,11 +364,22 @@ USE_STAGE_MOCKS=false
 
 ---
 
-## 16. Definition of done (hour 48)
+## 16. Definition of done (submission, Nov 24 23:59)
 
 1. Texting the bot a Pidgin order returns a working checkout link.
 2. A buyer can pay (test) and funds show as held; vendor is notified in WhatsApp.
 3. Dispatch photo is AI-verified and visible to the buyer.
 4. Buyer's release actually moves money (test transfer) and writes ledger entries.
 5. "How much this week?" returns a correct multi-currency summary.
-6. A rehearsed 3-minute demo, a backup video, and one-line answers to the five judge questions.
+6. Everything reachable on public deployed URLs (Vercel + Render + Atlas + devnet).
+7. README lists sprint-built features + AI tools disclosure.
+8. 5:00 video posted publicly, tagged, incognito-tested, form submitted.
+
+## 17. Submission checklist (rubric compliance)
+
+- [ ] Registration form submitted (BEFORE Nov 22 noon)
+- [ ] GitHub repo public; README has: what it does, how to run, **sprint-work list**, **AI tools disclosure**
+- [ ] Deployed URLs in README (web + API + program id)
+- [ ] Video 4:50–5:10, public post, tags TCC + #CTCHackathon2026 #TechConferenceCalabar
+- [ ] Link tested in incognito; form submitted before Nov 24 23:59; one submission only
+- [ ] Engagement push starts immediately after posting (15% of final score)
