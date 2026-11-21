@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.next/
+out/
+.env
+.env.local
+.env*.local
+*.log
+.DS_Store
+
+# anchor / rust
+target/
+anchor/target/
+anchor/node_modules/
+anchor/.anchor/
