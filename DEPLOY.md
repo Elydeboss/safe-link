@@ -17,7 +17,7 @@ Goal: everything on public URLs so the README can say "deployed" and the video s
    - **Build Command:** `npm install`
    - **Start Command:** `npm start`
    - **Instance Type:** Free
-4. Environment → add ALL vars from `backend/.env.example` (Mongo = Atlas string, `PUBLIC_BASE_URL` = the Render URL, `USE_STAGE_MOCKS=false`).
+4. Environment → add ALL vars from `backend/.env.example` (Mongo = Atlas string, `PUBLIC_BASE_URL` = the **Vercel web app URL** from step 3 — checkout links point there, `USE_STAGE_MOCKS=false`).
 5. Deploy. Health check: `https://<app>.onrender.com/api/health`.
 
 > Free-tier note: the service sleeps after inactivity. Meta retries webhooks and our
@@ -29,6 +29,7 @@ Goal: everything on public URLs so the README can say "deployed" and the video s
 1. Vercel → New Project → import repo → **Root Directory:** `web` (framework auto-detected).
 2. Environment vars: `NEXT_PUBLIC_API_URL=https://<app>.onrender.com`, `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_...`
 3. Deploy. Checkout page: `https://<app>.vercel.app/pay/<slug>`.
+4. Put that Vercel URL into the backend's `PUBLIC_BASE_URL` (Render env) so checkout links in WhatsApp point to the deployed web app.
 
 ## 4. WhatsApp Cloud API (15 min)
 
