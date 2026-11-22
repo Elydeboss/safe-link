@@ -134,7 +134,7 @@ export async function executeFiatRelease(slug: string, releaseToken: string, opt
       const t = await initiateTransfer({
         amountKobo: net,
         recipientCode: vendor.payoutDetails.paystackRecipientCode,
-        reason: `Kolo escrow release ${slug}`,
+        reason: `SafeLink escrow release ${slug}`,
         reference: `kolo_rel_${slug}_${nanoidRef()}`,
       });
       payoutRef = t.transfer_code;

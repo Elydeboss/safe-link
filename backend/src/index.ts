@@ -49,8 +49,8 @@ async function main(): Promise<void> {
   app.use('/api/chat', chatRouter);
 
   app.listen(config.port, () => {
-    console.log(`[kolo] backend listening on :${config.port}`);
-    console.log(`[kolo] public base url: ${config.publicBaseUrl}`);
+    console.log(`[safelink] backend listening on :${config.port}`);
+    console.log(`[safelink] public base url: ${config.publicBaseUrl}`);
   });
 }
 

@@ -25,15 +25,15 @@ function getProvider(): Promise<Provider<import('./types').EscrowEvt>> {
   return providerPromise;
 }
 
-export async function createKoloDomain() {
+export async function createSafeLinkDomain() {
   const provider = await getProvider();
   return createDomain({ provider }, { escrow: escrowAgg });
 }
 
 /** Singleton domain + handler factory used across the app. */
-let domainCache: Awaited<ReturnType<typeof createKoloDomain>> | null = null;
+let domainCache: Awaited<ReturnType<typeof createSafeLinkDomain>> | null = null;
 
-export async function getDomain(): Promise<Awaited<ReturnType<typeof createKoloDomain>>> {
-  if (!domainCache) domainCache = await createKoloDomain();
+export async function getDomain(): Promise<Awaited<ReturnType<typeof createSafeLinkDomain>>> {
+  if (!domainCache) domainCache = await createSafeLinkDomain();
   return domainCache;
 }

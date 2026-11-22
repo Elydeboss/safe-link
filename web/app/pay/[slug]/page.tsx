@@ -49,7 +49,7 @@ export default function PayPage({ params }: { params: { slug: string } }) {
   const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? '';
   const initializePayment = usePaystackPayment({
     publicKey,
-    email: `buyer+${slug}@kolo.africa`,
+    email: `buyer+${slug}@safelink.africa`,
     amount: invoice?.amountNgn ?? 0, // kobo
     reference: slug,
     currency: 'NGN',
@@ -404,7 +404,7 @@ export default function PayPage({ params }: { params: { slug: string } }) {
       {error && data && <p className="mt-4 rounded-xl bg-red-50 p-3 text-center text-sm text-red-700">{error}</p>}
 
       <p className="mt-8 text-center text-xs text-slate-400">
-        Powered by Kolo · AI-verified escrow for WhatsApp commerce
+        Powered by SafeLink · AI-verified escrow for WhatsApp commerce
       </p>
     </main>
   );

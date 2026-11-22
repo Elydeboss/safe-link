@@ -35,8 +35,8 @@ export default function ChatPage() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const p = localStorage.getItem('kolo_phone');
-    const n = localStorage.getItem('kolo_name');
+    const p = localStorage.getItem('safelink_phone');
+    const n = localStorage.getItem('safelink_name');
     if (p && n) {
       setPhone(p);
       setName(n);
@@ -50,10 +50,10 @@ export default function ChatPage() {
 
   function join() {
     if (phone.replace(/\D/g, '').length < 7 || !name.trim()) return;
-    localStorage.setItem('kolo_phone', phone);
-    localStorage.setItem('kolo_name', name);
+    localStorage.setItem('safelink_phone', phone);
+    localStorage.setItem('safelink_name', name);
     setJoined(true);
-    setMessages([{ role: 'bot', text: `Kolo dey here 💪 (${name.trim()}). Tell me wetin you wan sell — e.g. "Invoice 2 sneakers 45k for Tunde with escrow" — or ask about your money.`, ts: Date.now() }]);
+    setMessages([{ role: 'bot', text: `SafeLink dey here 💪 (${name.trim()}). Tell me wetin you wan sell — e.g. "Invoice 2 sneakers 45k for Tunde with escrow" — or ask about your money.`, ts: Date.now() }]);
   }
 
   async function send() {
@@ -95,7 +95,7 @@ export default function ChatPage() {
         <div className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-xl">
           <div className="mb-4 text-center">
             <div className="text-4xl">💬</div>
-            <h1 className="mt-2 text-xl font-bold">Chat with Kolo</h1>
+            <h1 className="mt-2 text-xl font-bold">Chat with SafeLink</h1>
             <p className="text-xs text-slate-500">The AI escrow agent — same brain as the WhatsApp bot</p>
           </div>
           <input
@@ -124,7 +124,7 @@ export default function ChatPage() {
       <header className="flex items-center gap-3 bg-[#075e54] px-4 py-3 text-white">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-xl">🔒</div>
         <div className="flex-1">
-          <p className="font-semibold">Kolo · AI Escrow Agent</p>
+          <p className="font-semibold">SafeLink · AI Escrow Agent</p>
           <p className="text-[11px] text-white/70">{name} · {phone}</p>
         </div>
         <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase tracking-wider">demo</span>

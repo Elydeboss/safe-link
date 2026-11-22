@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Kolo — Secure Checkout',
+  title: 'SafeLink — Secure Checkout',
   description: 'Buyer-protected payments for WhatsApp vendors',
 };
 
