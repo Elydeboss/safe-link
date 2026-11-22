@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { connectDb } from '../db';
 import { handleText } from '../services/agent';
 import { InvoiceModel } from '../models';
+import { startProjections } from '../events/projections';
 
 const VENDOR = '2348000000000';
 const NAME = 'Ada';
@@ -14,12 +15,13 @@ const NAME = 'Ada';
 async function say(text: string): Promise<string> {
   console.log(`\n🧑🏽 VENDOR: ${text}`);
   const reply = await handleText(VENDOR, NAME, text);
-  console.log(`🤖 KOLO:   ${reply}`);
+  console.log(`🤖 SAFELINK: ${reply}`);
   return reply;
 }
 
 async function main(): Promise<void> {
   await connectDb();
+  await startProjections(); // commands are event-sourced; read models must be live
 
   // 1. Pidgin invoice request — expect create_invoice tool call + link in reply
   const reply = await say('Abeg create invoice for 2 Airpods Pro, 60k total, for Chioma. With escrow abeg');
@@ -38,6 +40,7 @@ async function main(): Promise<void> {
 
   console.log('\nAGENT TEST PASSED ✅');
   await mongoose.disconnect();
+  process.exit(0); // projection poll timer keeps the loop alive otherwise
 }
 
 main().catch((err) => {

@@ -55,9 +55,9 @@ export function aiModels(): { chat: string; vision: string; audio: string } {
   switch (c.provider) {
     case 'gemini':
       return {
-        chat: c.chatModel || 'gemini-2.5-flash',
-        vision: c.visionModel || c.chatModel || 'gemini-2.5-flash',
-        audio: c.audioModel || 'gemini-2.5-flash',
+        chat: c.chatModel || 'gemini-3.5-flash',
+        vision: c.visionModel || c.chatModel || 'gemini-3.5-flash',
+        audio: c.audioModel || 'gemini-3.5-flash',
       };
     case 'groq':
       return {
