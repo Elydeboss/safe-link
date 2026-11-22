@@ -7,6 +7,7 @@ import { chatRouter } from './routes/chat';
 import { invoicesRouter } from './routes/invoices';
 import { escrowsRouter } from './routes/escrows';
 import { devRouter } from './routes/dev';
+import { startProjections } from './events/projections';
 
 async function main(): Promise<void> {
   warnMissingConfig();
@@ -16,6 +17,14 @@ async function main(): Promise<void> {
     console.log('[db] connected');
   } catch (err) {
     console.error('[db] connect failed — starting anyway, will retry per request:', (err as Error).message);
+  }
+
+  // Event-sourced core: fold the escrow event stream into the read models.
+  // Must run before any command is accepted, otherwise nothing materializes.
+  try {
+    await startProjections();
+  } catch (err) {
+    console.error('[events] projections failed to start:', (err as Error).message);
   }
 
   const app = express();

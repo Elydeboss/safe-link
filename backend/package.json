@@ -12,6 +12,7 @@
   "dependencies": {
     "@solana/web3.js": "^1.95.3",
     "dotenv": "^16.4.5",
+    "evtstore": "^12.0.1",
     "express": "^4.19.2",
     "mongoose": "^8.5.1",
     "nanoid": "^5.0.7",

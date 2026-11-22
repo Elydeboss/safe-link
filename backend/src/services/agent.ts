@@ -2,10 +2,11 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import crypto from 'node:crypto';
 import { config, aiModels, providerBaseUrl } from '../config';
-import { InvoiceModel, EscrowModel, VendorModel, type IInvoice } from '../models';
+import { InvoiceModel, VendorModel, type IInvoice } from '../models';
 import { summarize, type Timeframe } from './ledger';
 import { nanoid } from 'nanoid';
 import { deriveEscrowPda, deriveVaultPda, solanaConfigured } from './solana';
+import { getEscrowCommands, pollUntil } from '../events/commands';
 
 /**
  * TIER 1 — AI Perception. Non-deterministic on purpose, and therefore never
@@ -170,55 +171,60 @@ export async function createCommerceInvoice(phone: string, argsRaw: unknown): Pr
     return { ok: false, escrow: args.isEscrow, error: 'USDC payments are not configured yet (Solana program not deployed). Ask for naira.' };
   }
 
-  const vendor = await upsertVendor(phone);
+  // Vendor upsert keeps the real business name; the projection's $setOnInsert won't override it.
+  await upsertVendor(phone);
   const total = args.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
 
-  const invoice = await InvoiceModel.create({
-    slug: nanoid(10),
-    vendorId: vendor._id,
-    tradeType: 'COMMERCE',
-    buyerPhone: args.buyerPhone,
-    items: args.items,
-    amountNgn: args.currency === 'NGN' ? Math.round(total * 100) : undefined, // kobo
-    amountUsdc: args.currency === 'USDC' ? Math.round(total * 1_000_000) : undefined, // base units
-    currency: args.currency,
-    isEscrow: args.isEscrow,
-    status: 'PENDING',
-    paymentRail: args.currency === 'USDC' ? 'SOLANA_PDA' : 'PAYSTACK',
-  });
-
+  // Generate identity/capability material HERE — the plaintext release token
+  // exists only in the buyer's link; only its sha256 ever touches the store.
+  const slug = nanoid(10);
   const releaseToken = crypto.randomBytes(24).toString('hex');
   // unique-ish u64 seed for the on-chain PDA (timestamp + random, < 1e9)
   const seed = (Date.now() * 1000 + Math.floor(Math.random() * 999)) % 1_000_000_000;
-  await EscrowModel.create({
-    invoiceId: invoice._id,
-    rail: args.currency === 'USDC' ? 'SOLANA_PDA' : 'FIAT_PSP',
-    escrowSeed: seed,
-    ...(args.currency === 'USDC' && solanaConfigured()
-      ? {
-          onChainPdaAddress: deriveEscrowPda(seed).toBase58(),
-          onChainVaultAddress: deriveVaultPda(deriveEscrowPda(seed)).toBase58(),
-        }
-      : {}),
-    releaseTokenHash: crypto.createHash('sha256').update(releaseToken).digest('hex'),
+  const paymentRail = args.currency === 'USDC' ? 'SOLANA_PDA' : 'PAYSTACK';
+
+  // Event-sourced creation: ONE immutable invoiceCreated event; the projection
+  // materializes the Invoice + Escrow read-model docs.
+  const cmds = await getEscrowCommands();
+  await cmds.createInvoice(slug, {
+    payload: {
+      vendorPhone: phone,
+      buyerPhone: args.buyerPhone,
+      tradeType: 'COMMERCE',
+      items: args.items,
+      amountNgn: args.currency === 'NGN' ? Math.round(total * 100) : undefined, // kobo
+      amountUsdc: args.currency === 'USDC' ? Math.round(total * 1_000_000) : undefined, // base units
+      currency: args.currency,
+      isEscrow: args.isEscrow,
+      paymentRail,
+      escrowSeed: seed,
+      releaseTokenHash: crypto.createHash('sha256').update(releaseToken).digest('hex'),
+      ...(args.currency === 'USDC' && solanaConfigured()
+        ? {
+            onChainPdaAddress: deriveEscrowPda(seed).toBase58(),
+            onChainVaultAddress: deriveVaultPda(deriveEscrowPda(seed)).toBase58(),
+          }
+        : {}),
+    },
   });
+  await pollUntil(async () => Boolean(await InvoiceModel.findOne({ slug }).lean()));
 
   // The buyer's capability link carries the release token (?k=). Fiat only;
   // USDC release is signed by the buyer's wallet on-chain instead.
   const payLink =
     args.currency === 'NGN'
-      ? `${config.publicBaseUrl}/pay/${invoice.slug}?k=${releaseToken}`
-      : `${config.publicBaseUrl}/pay/${invoice.slug}`;
+      ? `${config.publicBaseUrl}/pay/${slug}?k=${releaseToken}`
+      : `${config.publicBaseUrl}/pay/${slug}`;
 
   return {
     ok: true,
-    slug: invoice.slug,
+    slug,
     payLink,
-    amountNgn: invoice.amountNgn,
-    amountUsdc: invoice.amountUsdc,
+    amountNgn: args.currency === 'NGN' ? Math.round(total * 100) : undefined,
+    amountUsdc: args.currency === 'USDC' ? Math.round(total * 1_000_000) : undefined,
     currency: args.currency,
     escrow: args.isEscrow,
-    rail: invoice.paymentRail,
+    rail: paymentRail,
   };
 }
 
@@ -228,33 +234,34 @@ export async function createP2PEscrow(phone: string, argsRaw: unknown): Promise<
   if (!parsed.success) return { ok: false, error: `invalid p2p params: ${parsed.error.message}` };
   const args = parsed.data;
 
-  const vendor = await upsertVendor(phone);
+  await upsertVendor(phone);
   const rate = Math.round((args.nairaAmount / args.usdcAmount) * 100) / 100;
-  const invoice = await InvoiceModel.create({
-    slug: nanoid(10),
-    vendorId: vendor._id,
-    tradeType: 'P2P_CRYPTO',
-    buyerPhone: args.buyerPhone,
-    amountUsdc: Math.round(args.usdcAmount * 1_000_000),
-    amountNgn: Math.round(args.nairaAmount * 100),
-    exchangeRate: rate,
-    currency: 'USDC',
-    isEscrow: true,
-    status: 'PENDING',
-    paymentRail: 'SOLANA_PDA',
-  });
 
+  const slug = nanoid(10);
   const seed = (Date.now() * 1000 + Math.floor(Math.random() * 999)) % 1_000_000_000;
-  await EscrowModel.create({
-    invoiceId: invoice._id,
-    rail: 'SOLANA_PDA',
-    escrowSeed: seed,
-    onChainPdaAddress: deriveEscrowPda(seed).toBase58(),
-    onChainVaultAddress: deriveVaultPda(deriveEscrowPda(seed)).toBase58(),
-    releaseTokenHash: crypto.createHash('sha256').update(crypto.randomBytes(24)).digest('hex'), // unused for P2P (wallet-signed)
-  });
 
-  return { ok: true, lockLink: `${config.publicBaseUrl}/pay/${invoice.slug}`, rate };
+  const cmds = await getEscrowCommands();
+  await cmds.createInvoice(slug, {
+    payload: {
+      vendorPhone: phone,
+      buyerPhone: args.buyerPhone,
+      tradeType: 'P2P_CRYPTO',
+      items: [],
+      amountUsdc: Math.round(args.usdcAmount * 1_000_000),
+      amountNgn: Math.round(args.nairaAmount * 100),
+      exchangeRate: rate,
+      currency: 'USDC',
+      isEscrow: true,
+      paymentRail: 'SOLANA_PDA',
+      escrowSeed: seed,
+      onChainPdaAddress: deriveEscrowPda(seed).toBase58(),
+      onChainVaultAddress: deriveVaultPda(deriveEscrowPda(seed)).toBase58(),
+      releaseTokenHash: crypto.createHash('sha256').update(crypto.randomBytes(24)).digest('hex'), // unused for P2P (wallet-signed)
+    },
+  });
+  await pollUntil(async () => Boolean(await InvoiceModel.findOne({ slug }).lean()));
+
+  return { ok: true, lockLink: `${config.publicBaseUrl}/pay/${slug}`, rate };
 }
 
 async function ledgerSummaryTool(phone: string, argsRaw: unknown): Promise<unknown> {

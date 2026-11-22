@@ -11,9 +11,13 @@ import { InvoiceModel, LedgerEntryModel } from '../models';
 import { createCommerceInvoice } from '../services/agent';
 import { mockFund, executeFiatRelease } from '../services/escrowFlow';
 import { summarize } from '../services/ledger';
+import { startProjections } from '../events/projections';
 
 async function main(): Promise<void> {
   await connectDb();
+  // The smoke test drives evtstore commands end-to-end, so the read-model
+  // projections must be running for the Invoice/Ledger docs to materialize.
+  await startProjections();
   const vendorPhone = '2348000000000';
   const buyerPhone = '2348011111111';
 
@@ -65,6 +69,7 @@ async function main(): Promise<void> {
 
   console.log('\nALL SMOKE TESTS PASSED ✅');
   await mongoose.disconnect();
+  process.exit(0); // projection poll timer keeps the loop alive otherwise
 }
 
 main().catch((err) => {
