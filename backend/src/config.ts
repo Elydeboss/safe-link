@@ -12,10 +12,19 @@ export const config = {
   useStageMocks: bool(env.USE_STAGE_MOCKS),
 
   whatsapp: {
+    // '' = auto-detect from which credentials exist (greenapi → meta → mock)
+    provider: (env.WHATSAPP_PROVIDER ?? '') as '' | 'greenapi' | 'meta' | 'mock',
     token: env.WHATSAPP_TOKEN ?? '',
     phoneNumberId: env.WHATSAPP_PHONE_NUMBER_ID ?? '',
     verifyToken: env.WHATSAPP_VERIFY_TOKEN ?? 'kolo-verify',
     graphVersion: 'v21.0',
+  },
+
+  greenApi: {
+    baseUrl: env.GREEN_API_BASE_URL ?? 'https://api.green-api.com',
+    instanceId: env.GREEN_API_INSTANCE_ID ?? '',
+    apiToken: env.GREEN_API_API_TOKEN ?? '',
+    pollMs: Number(env.GREEN_API_POLL_MS ?? 3000),
   },
 
   ai: {
@@ -74,6 +83,17 @@ export function aiModels(): { chat: string; vision: string; audio: string } {
   }
 }
 
+/** Resolves the WhatsApp transport: explicit WHATSAPP_PROVIDER wins, else
+ *  auto-detect from credentials. USE_STAGE_MOCKS always forces mock (stage safety). */
+export function whatsappProvider(): 'greenapi' | 'meta' | 'mock' {
+  if (config.useStageMocks) return 'mock';
+  const p = config.whatsapp.provider;
+  if (p === 'greenapi' || p === 'meta' || p === 'mock') return p;
+  if (config.greenApi.instanceId && config.greenApi.apiToken) return 'greenapi';
+  if (config.whatsapp.token) return 'meta';
+  return 'mock';
+}
+
 export function providerBaseUrl(provider: string): string | undefined {
   switch (provider) {
     case 'gemini':
@@ -88,18 +108,24 @@ export function providerBaseUrl(provider: string): string | undefined {
 }
 
 const required: Array<[string, string]> = [
-  ['WHATSAPP_TOKEN', config.whatsapp.token],
-  ['WHATSAPP_PHONE_NUMBER_ID', config.whatsapp.phoneNumberId],
   ['AI_API_KEY (or OPENAI_API_KEY)', config.ai.apiKey],
   ['PAYSTACK_SECRET_KEY', config.paystack.secretKey],
   ['MONGODB_URI', config.mongoUri],
 ];
+
+const waProvider = whatsappProvider();
+if (waProvider === 'meta') {
+  required.push(['WHATSAPP_TOKEN', config.whatsapp.token], ['WHATSAPP_PHONE_NUMBER_ID', config.whatsapp.phoneNumberId]);
+} else if (waProvider === 'greenapi') {
+  required.push(['GREEN_API_INSTANCE_ID', config.greenApi.instanceId], ['GREEN_API_API_TOKEN', config.greenApi.apiToken]);
+}
 
 export function warnMissingConfig(): void {
   const missing = required.filter(([, v]) => !v).map(([k]) => k);
   if (missing.length > 0) {
     console.warn(`[config] missing env vars: ${missing.join(', ')} — some flows will fail until set`);
   }
+  console.log(`[config] whatsapp transport: ${waProvider}`);
   if (!config.solana.programId) {
     console.warn('[config] ESCROW_PROGRAM_ID not set — USDC/P2P flows disabled until anchor deploy (see anchor/README.md)');
   }

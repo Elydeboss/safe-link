@@ -1,5 +1,5 @@
 import express, { type Request } from 'express';
-import { config, warnMissingConfig } from './config';
+import { config, warnMissingConfig, whatsappProvider } from './config';
 import { connectDb } from './db';
 import { whatsappWebhookRouter } from './routes/whatsapp';
 import { paystackWebhookRouter } from './routes/paystack';
@@ -8,6 +8,8 @@ import { invoicesRouter } from './routes/invoices';
 import { escrowsRouter } from './routes/escrows';
 import { devRouter } from './routes/dev';
 import { startProjections } from './events/projections';
+import { startGreenApiPoller } from './services/greenapiPoller';
+import { greenState } from './services/greenapi';
 
 async function main(): Promise<void> {
   warnMissingConfig();
@@ -39,7 +41,24 @@ async function main(): Promise<void> {
     }),
   );
 
-  app.get('/api/health', (_req, res) => res.json({ ok: true, mocks: config.useStageMocks, ts: Date.now() }));
+  // Green API state is a live external call — cache 60s so /api/health stays fast.
+  let waStateCache: { at: number; state: string } | null = null;
+  async function whatsappHealth(): Promise<{ provider: string; state?: string }> {
+    const provider = whatsappProvider();
+    if (provider !== 'greenapi') return { provider };
+    if (!waStateCache || Date.now() - waStateCache.at > 60_000) {
+      try {
+        waStateCache = { at: Date.now(), state: await greenState() };
+      } catch {
+        waStateCache = { at: Date.now(), state: 'unknown' };
+      }
+    }
+    return { provider, state: waStateCache.state };
+  }
+
+  app.get('/api/health', async (_req, res) =>
+    res.json({ ok: true, mocks: config.useStageMocks, whatsapp: await whatsappHealth(), ts: Date.now() }),
+  );
 
   app.use('/webhooks/whatsapp', whatsappWebhookRouter);
   app.use('/webhooks/paystack', paystackWebhookRouter);
@@ -47,6 +66,9 @@ async function main(): Promise<void> {
   app.use('/api/escrows', escrowsRouter);
   app.use('/api/dev', devRouter);
   app.use('/api/chat', chatRouter);
+
+  // WhatsApp ingress: Green API poller (demo transport). Meta uses the webhook route instead.
+  if (whatsappProvider() === 'greenapi') startGreenApiPoller();
 
   app.listen(config.port, () => {
     console.log(`[safelink] backend listening on :${config.port}`);

@@ -54,7 +54,7 @@ Built for **TCC Hackathon 2026** (Tech Conference Calabar) — *"Solve Local Pro
 - [x] **Vision-AI dispatch verification** — vendor snaps the package/waybill, the model audits it against the invoice line items, the buyer sees the verdict
 - [x] **Conversational multi-currency ledger** — "how much I don make this week?" → settled vs held, per currency
 - [x] **Solana Anchor escrow program** (`anchor/`) — non-custodial PDA vault + token escrow, compiles clean; deploy to devnet scheduled Day 2
-- [ ] WhatsApp Cloud API **live** ingress (blocked on Meta phone verification — identical pipeline already runs on `/chat`)
+- [x] **WhatsApp ingress — live via Green API gateway** (linked-device protocol, QR-paired demo line; free Developer tier) — text, voice notes (transcribed) and dispatch photos (vision-verified) flow through the identical agent pipeline. The **Meta Cloud API webhook is also implemented** (`/webhooks/whatsapp`) and is the production path once Meta's phone verification unblocks — see [`GREENAPI.md`](GREENAPI.md).
 - [ ] Solana **devnet deployment** + demo USDC flow end-to-end
 - [ ] Cloud deploys (Atlas → Render → Vercel) + 5-min demo video
 
@@ -127,4 +127,4 @@ cd backend && npx tsx src/scripts/smoke.ts
 - Paystack is in **test mode** for the hackathon — real money movement requires KYB onboarding (post-hackathon).
 - Release links are capability URLs (`?k=`); buyer accounts don't exist in the MVP.
 - Disputes **freeze** funds; resolution is admin-mediated in v1 (the on-chain program's `cancel` path supports protocol-level refunds).
-- WhatsApp ingress is built but blocked on Meta's phone verification — the `/chat` surface runs the identical agent pipeline meanwhile.
+- The live WhatsApp demo runs on the **Green API gateway** (WhatsApp linked-device protocol) because Meta's phone verification blocked Cloud API access during the sprint. It's an unofficial transport (ToS risk — hence a disposable demo SIM, human-volume chats only); the Meta Cloud API path is fully implemented and is the production story. The transport is a swappable facade (`WHATSAPP_PROVIDER=greenapi|meta|mock`).

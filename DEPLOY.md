@@ -31,7 +31,18 @@ Goal: everything on public URLs so the README can say "deployed" and the video s
 3. Deploy. Checkout page: `https://<app>.vercel.app/pay/<slug>`.
 4. Put that Vercel URL into the backend's `PUBLIC_BASE_URL` (Render env) so checkout links in WhatsApp point to the deployed web app.
 
-## 4. WhatsApp Cloud API (15 min)
+## 4. WhatsApp transport (2 options)
+
+**A. Green API gateway — the demo transport (no Meta approval needed)**
+
+1. console.green-api.com → create free **Developer** instance → note `idInstance` + API token.
+2. Render env: `WHATSAPP_PROVIDER=greenapi`, `GREEN_API_BASE_URL=https://api.green-api.com`, `GREEN_API_INSTANCE_ID`, `GREEN_API_API_TOKEN` (redploy).
+3. Scan the pairing QR **once** (console → instance → QR tab, or `GET {base}/waInstance{id}/qr/{token}`) with the demo SIM's WhatsApp: *Settings → Linked devices → Link a device*.
+4. `/api/health` should show `"whatsapp":{"provider":"greenapi","state":"authorized"}`.
+
+Ingress is `ReceiveNotification` polling — **no public webhook URL needed**. Free tier = 3 chats (vendor + buyer + spare), limits reset monthly; media downloads capped at 500/month.
+
+**B. Meta Cloud API — the production path (blocked on phone verification)**
 
 1. developers.facebook.com → Create App → Business → add **WhatsApp** product.
 2. Use the **test number**. Copy the permanent token (App Setup → generate token), Phone Number ID, and set your own `WHATSAPP_VERIFY_TOKEN`.
