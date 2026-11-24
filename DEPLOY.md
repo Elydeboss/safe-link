@@ -36,9 +36,10 @@ Goal: everything on public URLs so the README can say "deployed" and the video s
 **A. Green API gateway — the demo transport (no Meta approval needed)**
 
 1. console.green-api.com → create free **Developer** instance → note `idInstance` + API token.
-2. Render env: `WHATSAPP_PROVIDER=greenapi`, `GREEN_API_BASE_URL=https://api.green-api.com`, `GREEN_API_INSTANCE_ID`, `GREEN_API_API_TOKEN` (redploy).
-3. Scan the pairing QR **once** (console → instance → QR tab, or `GET {base}/waInstance{id}/qr/{token}`) with the demo SIM's WhatsApp: *Settings → Linked devices → Link a device*.
-4. `/api/health` should show `"whatsapp":{"provider":"greenapi","state":"authorized"}`.
+2. **Turn on notifications** (fresh instances are mute by default!): `POST {base}/waInstance{id}/setSettings/{token}` with body `{"incomingWebhook":"yes","markIncomingMessagesReadedOnReply":"yes"}` — or console → instance → Integrations → check *incoming*.
+3. Render env: `WHATSAPP_PROVIDER=greenapi`, `GREEN_API_BASE_URL=https://api.green-api.com`, `GREEN_API_INSTANCE_ID`, `GREEN_API_API_TOKEN` (redeploy).
+4. Scan the pairing QR **once** (console → instance → QR tab, or `GET {base}/waInstance{id}/qr/{token}`) with the demo SIM's WhatsApp: *Settings → Linked devices → Link a device*.
+5. `/api/health` should show `"whatsapp":{"provider":"greenapi","state":"authorized"}`.
 
 Ingress is `ReceiveNotification` polling — **no public webhook URL needed**. Free tier = 3 chats (vendor + buyer + spare), limits reset monthly; media downloads capped at 500/month.
 

@@ -151,7 +151,8 @@ The linked WhatsApp number **is SafeLink's business line** (the demo SIM). Vendo
 1. Register: `console.green-api.com/registration` (email).
 2. Create instance → tariff **Developer** (free). Note `idInstance` + API token from the instance page.
 3. `backend/.env`: `WHATSAPP_PROVIDER=greenapi`, `GREEN_API_INSTANCE_ID=…`, `GREEN_API_API_TOKEN=…`.
-4. `npm run dev` → boot log shows provider + state (`notAuthorized` expected).
+4. **Enable notifications** (fresh instances are mute — this bit us once): `POST {base}/waInstance{id}/setSettings/{token}` body `{"incomingWebhook":"yes","markIncomingMessagesReadedOnReply":"yes"}`.
+5. `npm run dev` → boot log shows provider + state (`notAuthorized` expected).
 5. Scan QR: console instance page → QR tab (or `GET /waInstance{id}/qr/{token}`) — on the **demo SIM's** WhatsApp: *Settings → Linked devices → Link a device*. State flips to `authorized`.
 6. From the vendor SIM, WhatsApp the SafeLink line: `"Abeg create invoice for 2 Airpods Pro, 60k total, for Chioma. With escrow abeg"` → reply with `/pay/…?k=…` link arrives in-chat.
 7. Buyer test-card payment → buyer ping arrives; vendor photo → vision verdict reply.
